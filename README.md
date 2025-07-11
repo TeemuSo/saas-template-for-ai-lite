@@ -7,10 +7,13 @@ A production-ready SaaS starter template built with Next.js 15, TypeScript, and 
 - **🔐 Complete Authentication** - Supabase Auth with email/password and OAuth providers
 - **💳 Payment Processing** - Stripe integration for one-time payments
 - **🗄️ Database** - PostgreSQL with Supabase and auto-generated TypeScript types
-- **🎨 Modern UI** - Tailwind CSS 4 with custom design system
+- **🎨 Modern UI** - Tailwind CSS 4 with custom design system and enhanced shadcn/ui components
 - **🛡️ Security** - Row Level Security (RLS) and proper auth patterns
 - **⚡ Performance** - Optimized for Core Web Vitals with server-side rendering
 - **🔧 Developer Experience** - TypeScript, ESLint, and comprehensive documentation
+- **🎯 Data Access Layer (DAL)** - Server-first authentication with React `cache()` for request memoization
+- **🎬 Animation System** - Beautiful animations and transitions built-in
+- **📱 Mobile Responsive** - Fully responsive design that works on all devices
 
 ## 📋 Prerequisites
 
@@ -78,14 +81,16 @@ saas-template-lite/
 
 ### Key Patterns
 
-**Authentication Flow:**
-- **Server-Side**: Use DAL functions (`getUser()`, `getUserWithAccess()`)
-- **Client-Side**: Use `useAuth()` hook for reactive UI
+**Authentication Flow (Data Access Layer):**
+- **Server Components**: Use DAL functions (`getUser()`, `getUserWithAccess()`, `getOptionalUser()`)
+- **Client Components**: Use `useAuth()` hook for reactive UI
 - **API Routes**: Use `getApiUser()` for protected endpoints
+- **System Operations**: Use service-role functions from `lib/db/queries.ts`
 
 **Database Operations:**
-- **User Operations**: Use DAL functions from `lib/auth/dal.ts`
-- **Service Operations**: Use functions from `lib/db/queries.ts`
+- **User Operations**: Use DAL functions from `lib/auth/dal.ts` with RLS
+- **Service Operations**: Use functions from `lib/db/queries.ts` with service-role
+- **Request Memoization**: DAL functions use React `cache()` for single database queries per request
 
 ## 🎯 Development
 
@@ -123,9 +128,10 @@ Open `app/globals.css` and update these variables:
 
 ### Key Customization Areas
 - **Landing Page**: `app/page.tsx` and `components/hero-section.tsx`
-- **App Dashboard**: `app/app/page.tsx`
-- **Design System**: `app/globals.css`
-- **Configuration**: `lib/config.ts`
+- **App Dashboard**: `app/app/page.tsx` - Main application area
+- **Design System**: `app/globals.css` - 2-variable color system
+- **Configuration**: `lib/config.ts` - App settings and constants
+- **UI Components**: `components/ui/` - Enhanced shadcn/ui components
 
 ## 📚 Documentation
 
@@ -145,13 +151,15 @@ Open `app/globals.css` and update these variables:
 
 ## 💻 Tech Stack
 
-- **Framework**: Next.js 15 with App Router
+- **Framework**: Next.js 15 with App Router and Turbopack
 - **Language**: TypeScript
 - **Database**: PostgreSQL via Supabase
 - **Auth**: Supabase Auth
 - **Payments**: Stripe
 - **Styling**: Tailwind CSS 4
-- **UI Components**: Radix UI primitives
+- **UI Components**: Radix UI primitives with shadcn/ui
+- **State Management**: React Query (TanStack Query)
+- **Icons**: Lucide React
 - **Package Manager**: pnpm
 
 ## 🚀 Deployment
@@ -182,11 +190,11 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com
 
 After getting the template running, you can:
 
-1. **Customize the design** - Update colors, fonts, and layout
-2. **Add new features** - User profiles, settings, dashboard
-3. **Integrate services** - Email, analytics, monitoring
-4. **Scale up** - Add subscription plans, team features
-5. **Deploy** - Get your SaaS live for users
+1. **Customize the design** - Update colors, fonts, and layout in `app/globals.css`
+2. **Add new features** - User profiles, settings, dashboard functionality
+3. **Integrate services** - Email (Resend), analytics (Vercel Analytics), monitoring (Sentry)
+4. **Scale up** - Add subscription plans, team features, advanced permissions
+5. **Deploy** - Get your SaaS live for users on Vercel or other platforms
 
 ## 🆘 Getting Help
 
@@ -195,10 +203,29 @@ After getting the template running, you can:
 - **Bugs**: Open an issue with reproduction steps
 - **Feature Requests**: Open an issue with detailed requirements
 
-## Frequently Asked Questions (debug here)
-### My Stripe checkout fails!
-If you are running the app **locally**, make sure you have the stripe webhook emulation running with `stripe listen --forward-to localhost:3000/api/stripe/webhook`. You will get STRIPE_WEBHOOK_SECRET, fill it to `.env.local`. 
+## 🐛 Troubleshooting
 
+### Common Issues
+
+**Stripe checkout fails!**
+- Ensure Stripe CLI is running: `stripe listen --forward-to localhost:3000/api/stripe/webhook`
+- Copy the webhook secret from CLI output to your `.env.local` file
+- Verify webhook events are configured in Stripe Dashboard
+
+**Sign-up fails after email confirmation!**
+- Check if database migrations were applied: `supabase db push`
+- Verify Authentication site URL in Supabase Dashboard matches your domain
+- Ensure RLS policies are properly configured
+
+**Database operation errors!**
+- Apply migrations: `supabase db push`
+- Generate TypeScript types: `pnpm db:types`
+- Check Supabase connection and API keys
+
+**TypeScript errors!**
+- Regenerate database types: `pnpm db:types`
+- Clear Next.js cache: `rm -rf .next && pnpm build`
+- Restart your development server
 
 ## 📄 License
 
