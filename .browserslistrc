@@ -1,0 +1,10 @@
+# Modern browsers only - reduce polyfills for better performance
+> 0.5%
+last 2 versions
+not dead
+not ie 11
+not op_mini all
+Firefox ESR
+Chrome >= 84
+Safari >= 13.1
+Edge >= 84 

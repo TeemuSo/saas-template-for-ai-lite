@@ -1,0 +1,136 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# AI Assistant Guidelines
+
+IMPORTANT: Always use your provided internal tools, dont use CLI unless you don't have a tool for it.
+
+## The product requirements documentation will be found from [prd.md](mdc:docs/prd.md).
+
+## Core Principles
+
+When working with this SaaS template, follow these principles to maintain code quality and avoid breaking existing functionality:
+
+**Customize the application at** `/app/app/`  
+**Add server functions to** `/app/api/`
+**Customize landing page at** `/app/page.tsx`
+
+IMPORTANT: When ever you add new files, updated the repository map at README.md!
+
+## Development Patterns
+
+### Adding New Features
+1. **Follow Cursor rules patterns** - rules auto-apply based on files you're working on
+2. **Use existing database queries** from `lib/db/queries.ts`
+3. **Follow authentication patterns** with `getUser()` and `useAuth()`
+4. **Apply rate limiting** to new API routes
+5. **Use design tokens** from `lib/utils.ts` for styling
+
+## Environment Variables
+
+### Adding New Environment Variables
+1. **Provide example values** in `.env.example`
+2. **Use descriptive names** with consistent prefixes
+3. **Update README** with description of the added values
+
+```typescript
+// ✅ GOOD: Clear, descriptive names
+OPENAI_API_KEY="sk-..."
+RESEND_API_KEY="re_..."
+UPLOADTHING_SECRET="sk_live_..."
+// ❌ BAD: Vague or conflicting names
+API_KEY="..."  // Which API?
+SECRET="..."   // What secret?
+```
+
+## Security Guidelines
+
+### Authentication
+- **Always check authentication** before processing requests
+- **Use `getUser()` for server-side** auth checks
+- **Use `useAuth()` for client-side** auth state
+- **Never bypass middleware** protection for `/app/*` routes
+
+## Common Mistakes to Avoid
+
+### ❌ Don't Hard-Code Values
+```typescript
+// BAD: Hard-coded values
+const price = 9900; // cents
+const productName = "SaaS Access";
+
+// GOOD: Use environment variables or fetch from Stripe
+const priceId = process.env.STRIPE_PRICE_ID!;
+const price = await getStripePrice(priceId);
+```
+
+### ❌ Don't Skip Authentication
+```typescript
+// BAD: No auth check
+export async function DELETE(request: NextRequest) {
+  const { id } = await request.json();
+  await deleteProject(id); // Anyone can delete anything!
+}
+
+// GOOD: Proper auth and ownership check
+export async function DELETE(request: NextRequest) {
+  const user = await getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  const { id } = await request.json();
+  const project = await getProject(id);
+  
+  if (project.userId !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  
+  await deleteProject(id);
+}
+```
+
+### ❌ Don't Bypass Rate Limiting
+```typescript
+// BAD: Custom API route without rate limiting
+export async function POST(request: NextRequest) {
+  // This bypasses the middleware rate limiting
+}
+
+// GOOD: Apply rate limiting in middleware or route
+import { apiRateLimiter, generateIpKey } from '@/lib/rate-limiting';
+
+export async function POST(request: NextRequest) {
+  const rateLimitKey = generateIpKey(request);
+  const rateLimitResult = await apiRateLimiter.checkLimit(rateLimitKey);
+  
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: rateLimitResult.error },
+      { status: 429 }
+    );
+  }
+  
+  // Your logic here
+}
+```
+
+## Documentation Requirements
+
+When adding new features:
+
+1. **Update relevant Cursor rules** if changing core patterns (.cursor/rules/)
+2. **Add inline comments** for complex logic
+3. **Document new environment variables** in README.md
+4. **Update API documentation** for new endpoints
+5. **Add usage examples** for new components or utilities
+
+## Getting Help
+
+When stuck or unsure:
+
+1. **Cursor rules will auto-apply** based on files you're working on
+2. **Look at similar existing code** in the template
+3. **Follow the principle**: "Build on top, don't replace"
+4. **Ask for clarification** if requirements are unclear
+5. **Test thoroughly** before considering complete 
