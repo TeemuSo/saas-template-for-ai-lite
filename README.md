@@ -2,6 +2,10 @@
 
 A production-ready SaaS starter template built with Next.js 15, TypeScript, and modern web technologies. Perfect for building your first SaaS application or learning modern full-stack development.
 
+<div align="center">
+  <img src="./public/app_screenshot.png" alt="SaaS Template Lite Screenshot" width="800" />
+</div>
+
 ## 🚀 Features
 
 - **🔐 Complete Authentication** - Supabase Auth with email/password and OAuth providers
