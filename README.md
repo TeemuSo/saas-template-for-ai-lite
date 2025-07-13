@@ -1,71 +1,55 @@
 # SaaS Template Lite
 
-A production-ready SaaS starter template built with Next.js 15, TypeScript, and modern web technologies. Perfect for building your first SaaS application or learning modern full-stack development.
+A beginner-friendly SaaS boilerplate built with Next.js 15, TypeScript, and Supabase. Get your SaaS up and running in minutes, not days.
 
 <div align="center">
   <img src="./public/app_screenshot.png" alt="SaaS Template Lite Screenshot" width="800" />
 </div>
 
-## 🚀 Features
+## ✨ What You Get
 
-- **🔐 Complete Authentication** - Supabase Auth with email/password and OAuth providers
-- **💳 Payment Processing** - Stripe integration for one-time payments
-- **🗄️ Database** - PostgreSQL with Supabase and auto-generated TypeScript types
-- **🎨 Modern UI** - Tailwind CSS 4 with custom design system and enhanced shadcn/ui components
-- **🛡️ Security** - Row Level Security (RLS) and proper auth patterns
-- **⚡ Performance** - Optimized for Core Web Vitals with server-side rendering
-- **🔧 Developer Experience** - TypeScript, ESLint, and comprehensive documentation
-- **🎯 Data Access Layer (DAL)** - Server-first authentication with React `cache()` for request memoization
-- **🎬 Animation System** - Beautiful animations and transitions built-in
-- **📱 Mobile Responsive** - Fully responsive design that works on all devices
+- **🔐 Complete Auth System** - Sign up, login, password reset
+- **💳 Payment Integration** - Stripe one-time payments
+- **🎨 Beautiful UI** - Modern design with Tailwind CSS
+- **📱 Mobile Ready** - Works perfectly on all devices
+- **🛡️ Secure by Default** - Database security and rate limiting
+- **🚀 Production Ready** - Deploy to Vercel in one click
 
-## 📋 Prerequisites
+## 🏃‍♂️ Quick Start
 
-- **Node.js 18+** - [Download here](https://nodejs.org/)
-- **pnpm** - Required package manager
-  ```bash
-  npm install -g pnpm
-  ```
-- **Supabase Account** - [Sign up free](https://supabase.com)
-- **Stripe Account** - [Sign up free](https://stripe.com)
-
-## ⚡ Quick Start
-
-### 1. Clone and Install
+### 1. Clone & Install
 ```bash
-git clone <your-repo-url>
+git clone git@github.com:TeemuSo/saas-template-for-ai-lite.git
 cd saas-template-lite
 pnpm install
 ```
 
-### 2. Environment Setup
+### 2. Choose Your Setup
+
+**Option A: Development Only (No Payment Required)**
 ```bash
+# Copy environment file
 cp .env.example .env.local
-# Edit .env.local with your keys (see SETUP.md for details)
-```
 
-### 3. Database Setup
-```bash
-# Link to your Supabase project
+# Set up Supabase (free tier)
 supabase link --project-ref your-project-id
-
-# Apply database migrations
 supabase db push
 
-# Generate TypeScript types
-pnpm db:types
-```
+# Apply optional migration to disable payments
+supabase db push --file supabase/optional_migrations/20250713170112_allow_access_to_app_without_payment.sql
 
-### 4. Run Development Server
-```bash
+# Start development
 pnpm dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to see your app!
+**Option B: Full Setup with Payments**
+See [SETUP.md](./SETUP.md) for complete setup with Stripe integration.
 
-## 🏗️ Architecture
+### 3. You're Ready!
+Visit [http://localhost:3000](http://localhost:3000) and start building your SaaS!
 
-### Core Structure
+## 🏗️ Project Structure
+
 ```
 saas-template-lite/
 ├── app/                    # Next.js 15 App Router
@@ -83,160 +67,98 @@ saas-template-lite/
 └── middleware.ts          # Route protection & rate limiting
 ```
 
-### Key Patterns
+## 🎨 Customization
 
-**Authentication Flow (Data Access Layer):**
-- **Server Components**: Use DAL functions (`getUser()`, `getUserWithAccess()`, `getOptionalUser()`)
-- **Client Components**: Use `useAuth()` hook for reactive UI
-- **API Routes**: Use `getApiUser()` for protected endpoints
-- **System Operations**: Use service-role functions from `lib/db/queries.ts`
-
-**Database Operations:**
-- **User Operations**: Use DAL functions from `lib/auth/dal.ts` with RLS
-- **Service Operations**: Use functions from `lib/db/queries.ts` with service-role
-- **Request Memoization**: DAL functions use React `cache()` for single database queries per request
-
-## 🎯 Development
-
-### Available Commands
-```bash
-# Development
-pnpm dev              # Start dev server with Turbopack
-pnpm build            # Build for production
-pnpm start            # Start production server
-
-# Database
-pnpm db:types         # Generate TypeScript types from Supabase
-supabase db push      # Apply migrations
-supabase db reset     # Reset database (careful!)
-
-# Testing
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
-
-### Adding New Features
-
-1. **Protected Pages**: Add to `app/app/` directory
-2. **API Routes**: Add to `app/api/` directory
-3. **Database Changes**: Create new migration files
-4. **UI Components**: Add to `components/` directory
-
-## 🔧 Customization
-
-### Branding (30 seconds)
-Open `app/globals.css` and update these variables:
+### Change Your Brand Colors (30 seconds)
+Edit `app/globals.css`:
 ```css
 --primary: 220 91% 60%;    /* Your brand color */
 --neutral: 220 9% 45%;     /* Gray shade */
 ```
 
-### Key Customization Areas
-- **Landing Page**: `app/page.tsx` and `components/hero-section.tsx`
-- **App Dashboard**: `app/app/page.tsx` - Main application area
-- **Design System**: `app/globals.css` - 2-variable color system
-- **Configuration**: `lib/config.ts` - App settings and constants
-- **UI Components**: `components/ui/` - Enhanced shadcn/ui components
+### Key Files to Customize
+- **Landing Page**: `app/page.tsx` - Your marketing page
+- **App Dashboard**: `app/app/page.tsx` - Main app interface
+- **Hero Section**: `components/hero-section.tsx` - Landing hero
+- **Configuration**: `lib/config.ts` - App settings
+
+## 🔧 Development vs Production
+
+### Development Mode (No Payments)
+Perfect for building and testing your SaaS:
+1. Run the optional migration to disable payments
+2. Users automatically get access to `/app`
+3. Focus on building your core features
+
+### Production Mode (With Payments)
+When ready to launch:
+1. Set up Stripe (see [SETUP.md](./SETUP.md))
+2. Don't run the optional migration
+3. Users must pay to access `/app`
+
+## 🚀 What's Next?
+
+1. **Build Your Features** - Add your SaaS functionality in `app/app/`
+2. **Customize Design** - Update colors, fonts, and layout
+3. **Add Your Content** - Replace placeholder text and images
+4. **Deploy** - Push to Vercel for instant deployment
 
 ## 📚 Documentation
 
-- **[Setup Guide](./SETUP.md)** - Detailed setup instructions
-- **[Styling Guide](./STYLING.md)** - Design system and customization
-- **[Authentication](./lib/auth/README.md)** - Auth patterns and usage
-- **[Database](./lib/db/README.md)** - Database operations and schema
-- **[Claude AI Guide](./CLAUDE.md)** - For AI-assisted development
+- **[Setup Guide](./SETUP.md)** - Complete setup with payments
+- **[Styling Guide](./STYLING.md)** - Design system details
+- **[Auth Guide](./lib/auth/README.md)** - Authentication patterns
+- **[Database Guide](./lib/db/README.md)** - Database operations
 
-## 🛡️ Security Features
+## 🛠️ Tech Stack
 
-- **Row Level Security (RLS)** - Database-level access control
-- **Rate Limiting** - API protection against abuse
-- **Input Validation** - Zod schemas for data validation
-- **Session Management** - Secure cookie-based sessions
-- **Webhook Verification** - Stripe webhook signature validation
-
-## 💻 Tech Stack
-
-- **Framework**: Next.js 15 with App Router and Turbopack
-- **Language**: TypeScript
-- **Database**: PostgreSQL via Supabase
+- **Framework**: Next.js 15 with App Router
+- **Database**: PostgreSQL (Supabase)
 - **Auth**: Supabase Auth
 - **Payments**: Stripe
-- **Styling**: Tailwind CSS 4
-- **UI Components**: Radix UI primitives with shadcn/ui
-- **State Management**: React Query (TanStack Query)
-- **Icons**: Lucide React
-- **Package Manager**: pnpm
+- **Styling**: Tailwind CSS
+- **UI**: Radix UI + shadcn/ui
+- **TypeScript**: Full type safety
 
-## 🚀 Deployment
+## 🚀 Deploy to Production
 
 ### Vercel (Recommended)
-1. Push your code to GitHub
-2. Import project in [Vercel](https://vercel.com)
+1. Push to GitHub
+2. Import to [Vercel](https://vercel.com)
 3. Add environment variables
 4. Deploy!
 
-### Environment Variables for Production
+### Environment Variables
 ```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+# Required for any database of auth operations
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Stripe
-STRIPE_SECRET_KEY=sk_live_your-live-key
-STRIPE_WEBHOOK_SECRET=whsec_your-webhook-secret
-STRIPE_PRICE_ID=price_your-price-id
-
-# App
-NEXT_PUBLIC_SITE_URL=https://your-domain.com
+SUPABASE_SERVICE_ROLE_KEY=your-service-key
+# Only needed if using payments
+STRIPE_SECRET_KEY=your-stripe-key       
+STRIPE_WEBHOOK_SECRET=your-webhook-secret
+STRIPE_PRICE_ID=your-price-id
 ```
 
-## 📈 What's Next?
+## 💡 Tips for Beginners
 
-After getting the template running, you can:
+- **Start Simple**: Use development mode first, add payments later
+- **Focus on Features**: Build your core SaaS functionality first
+- **Customize Gradually**: Change colors, then layout, then add features
+- **Read the Code**: Everything is documented and easy to understand
 
-1. **Customize the design** - Update colors, fonts, and layout in `app/globals.css`
-2. **Add new features** - User profiles, settings, dashboard functionality
-3. **Integrate services** - Email (Resend), analytics (Vercel Analytics), monitoring (Sentry)
-4. **Scale up** - Add subscription plans, team features, advanced permissions
-5. **Deploy** - Get your SaaS live for users on Vercel or other platforms
+## 🆘 Need Help?
 
-## 🆘 Getting Help
-
-- **Setup Issues**: Check [SETUP.md](./SETUP.md) troubleshooting section
-- **Code Questions**: Review the inline documentation
-- **Bugs**: Open an issue with reproduction steps
-- **Feature Requests**: Open an issue with detailed requirements
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Stripe checkout fails!**
-- Ensure Stripe CLI is running: `stripe listen --forward-to localhost:3000/api/stripe/webhook`
-- Copy the webhook secret from CLI output to your `.env.local` file
-- Verify webhook events are configured in Stripe Dashboard
-
-**Sign-up fails after email confirmation!**
-- Check if database migrations were applied: `supabase db push`
-- Verify Authentication site URL in Supabase Dashboard matches your domain
-- Ensure RLS policies are properly configured
-
-**Database operation errors!**
-- Apply migrations: `supabase db push`
-- Generate TypeScript types: `pnpm db:types`
-- Check Supabase connection and API keys
-
-**TypeScript errors!**
-- Regenerate database types: `pnpm db:types`
-- Clear Next.js cache: `rm -rf .next && pnpm build`
-- Restart your development server
+- **Setup Issues**: Check [SETUP.md](./SETUP.md) troubleshooting
+- **Code Questions**: Everything is documented inline
+- **Stuck?**: Open an issue with your question
 
 ## 📄 License
 
-MIT License - see [LICENSE](./LICENSE) file for details.
+MIT License - Build amazing SaaS applications!
 
 ---
 
-**Happy Building!** 🎉
+**Ready to build your SaaS?** 🚀
 
-This template gives you a solid foundation to build your SaaS application. Focus on your unique features while we handle the authentication, payments, and infrastructure.
+This template handles all the boring stuff (auth, payments, UI) so you can focus on building something awesome. Perfect for beginners who want to learn by doing!
