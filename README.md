@@ -3,7 +3,7 @@
 A beginner-friendly SaaS boilerplate built with Next.js 15, TypeScript, and Supabase. Get your SaaS up and running in minutes, not days.
 
 <div align="center">
-  <img src="./docs/images/app_screenshot.png" alt="SaaS Template Lite Screenshot" width="800" />
+  <img src="./public/app_screenshot.png" alt="SaaS Template Lite Screenshot" width="800" />
 </div>
 
 The easiest way to get started is to watch the video below.
