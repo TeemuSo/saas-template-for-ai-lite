@@ -3,7 +3,22 @@
 A beginner-friendly SaaS boilerplate built with Next.js 15, TypeScript, and Supabase. Get your SaaS up and running in minutes, not days.
 
 <div align="center">
-  <img src="./public/app_screenshot.png" alt="SaaS Template Lite Screenshot" width="800" />
+  <img src="./docs/images/app_screenshot.png" alt="SaaS Template Lite Screenshot" width="800" />
+</div>
+
+The easiest way to get started is to watch the video below.
+
+<!-- YouTube video embed using thumbnail -->
+<div align="center">
+  <a href="https://youtu.be/hLDD-ho_o4Y">
+    <img src="https://img.youtube.com/vi/hLDD-ho_o4Y/maxresdefault.jpg" alt="SaaS Template Demo" width="800" />
+  </a>
+</div>
+
+<div align="center">
+  <a href="https://youtu.be/hLDD-ho_o4Y">
+    <strong>▶️ Watch Demo Video</strong>
+  </a>
 </div>
 
 ## ✨ What You Get
@@ -110,6 +125,28 @@ When ready to launch:
 - **[Auth Guide](./lib/auth/README.md)** - Authentication patterns
 - **[Database Guide](./lib/db/README.md)** - Database operations
 
+## 📁 Repository Map
+
+```
+saas-template-lite/
+├── app/                    # Next.js App Router
+│   ├── (login)/           # Authentication pages
+│   ├── api/               # API routes
+│   ├── app/               # Main application
+│   └── auth/              # Auth callbacks
+├── components/            # Reusable UI components
+├── lib/                   # Utilities and configurations
+│   ├── auth/              # Authentication logic
+│   ├── db/                # Database queries
+│   ├── payments/          # Stripe integration
+│   └── supabase/          # Supabase client
+├── docs/                  # Documentation assets (README videos/images)
+│   ├── videos/            # Video demonstrations
+│   └── images/            # Documentation images
+├── public/                # Static assets (included in build)
+└── supabase/              # Database schema and migrations
+```
+
 ## 🛠️ Tech Stack
 
 - **Framework**: Next.js 15 with App Router
@@ -155,7 +192,7 @@ STRIPE_PRICE_ID=your-price-id
 
 ## 📄 License
 
-MIT License - Build amazing SaaS applications!
+MIT License applies.
 
 ---
 
