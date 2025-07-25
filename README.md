@@ -8,7 +8,6 @@ A beginner-friendly SaaS boilerplate built with Next.js 15, TypeScript, and Supa
 
 The easiest way to get started is to watch the video below.
 
-<!-- YouTube video embed using thumbnail -->
 <div align="center">
   <a href="https://youtu.be/hLDD-ho_o4Y">
     <img src="https://img.youtube.com/vi/hLDD-ho_o4Y/maxresdefault.jpg" alt="SaaS Template Demo" width="800" />
@@ -29,6 +28,10 @@ The easiest way to get started is to watch the video below.
 - **📱 Mobile Ready** - Works perfectly on all devices
 - **🛡️ Secure by Default** - Database security and rate limiting
 - **🚀 Production Ready** - Deploy to Vercel in one click
+
+## Do you need help building?
+
+I can help you finalize your application through 1-to-1 mentoring and application review, or by building the full MVP. Check out my offering at [Teemu Sormunen proto-to-MVP](https://teemusormunen.centrive.ai/mvp) page.
 
 ## 🏃‍♂️ Quick Start
 
