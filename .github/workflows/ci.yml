@@ -1,0 +1,42 @@
+name: CI
+
+# The owned, Claude-readable pipeline. When this fails on a PR,
+# `claude-auto-fix.yml` picks up the logs and pushes a fix.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same branch to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Install & type-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # pnpm version comes from `packageManager` in package.json (single source of truth).
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # `--frozen-lockfile` is the check that would have caught the original
+      # Vercel failure: it fails fast if package.json and pnpm-lock.yaml drift.
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm exec tsc --noEmit
