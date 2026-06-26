@@ -9,7 +9,9 @@ import {
 } from '@/lib/db/queries';
 import { config } from '@/lib/config';
 
-const stripe = new Stripe(config.stripe.secretKey);
+const stripe = new Stripe(config.stripe.secretKey, {
+  apiVersion: '2025-02-24.acacia'
+});
 
 /**
  * Stripe Webhook Handler
@@ -27,8 +29,6 @@ const stripe = new Stripe(config.stripe.secretKey);
  * - payment_intent.payment_failed: Payment failed, log for debugging
  */
 export async function POST(request: NextRequest) {
-  console.log('🚀 WEBHOOK CALLED! Request received');
-
   let event: Stripe.Event;
 
   try {
@@ -42,19 +42,15 @@ export async function POST(request: NextRequest) {
       stripeSignature as string,
       config.stripe.webhookSecret
     );
-    console.log('✅ Webhook signature verified successfully');
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    // On error, log and return the error message
-    if (err! instanceof Error) console.log(err);
-    console.log(`❌ Error message: ${errorMessage}`);
+    // On signature-verification failure, log the error and reject the request.
+    if (err instanceof Error) console.error('Webhook signature verification failed:', err);
     return NextResponse.json(
       {message: `Webhook Error: ${errorMessage}`},
       {status: 400}
     );
   }
-
-  console.log('✅ Success:', event.id);
 
   // Define which events we want to handle
   // For one-time payments, we mainly need checkout.session.completed

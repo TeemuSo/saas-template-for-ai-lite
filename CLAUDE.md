@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with this Next.js 15 SaaS template.
 
+> **Canonical conventions and invariants live in [`AGENTS.md`](./AGENTS.md). Read it first.** This file adds Claude Code specifics and must not contradict it.
+
 ## Development Commands
 
 ### Core Development
@@ -92,14 +94,18 @@ This is a Next.js 15 SaaS template using modern **Data Access Layer (DAL)** patt
 ## Development Patterns
 
 ### Adding New Features
-1. **Follow authentication patterns**: Use `getUser()` for server-side, `useAuth()` for client-side
+1. **Follow authentication patterns**: Use the DAL (`getUserWithAccess()` / `getApiUser()`) server-side, `useAuth()` for client UI only
 2. **Use existing database queries**: Extend `lib/db/queries.ts` rather than writing raw SQL
-3. **Apply rate limiting**: New API routes should include rate limiting
-4. **Follow design system**: Use CSS variables and Tailwind utilities
+3. **Rate limiting is automatic**: `middleware.ts` rate-limits all `/api/*` (except `/api/health` and `/api/stripe/webhook`) via `lib/rate-limit.ts` — no per-route setup needed
+4. **Fetch with raw `fetch`**: no swr / react-query
+5. **Follow design system**: Use the CSS variables in `app/globals.css` and Tailwind utilities
 
 ### Data Access Layer (DAL) Pattern
 
 **Server Components (Recommended)**
+
+> Every `app/app/*` page is already guarded by `getUserWithAccess()` in `app/app/layout.tsx` (the single guard). New protected pages need no extra auth check.
+
 ```typescript
 // DAL functions with auth checks and RLS
 import { getUser, getUserWithAccess, getOptionalUser } from '@/lib/auth/dal';
@@ -152,9 +158,10 @@ const { user, dbUser, loading } = useAuth(); // Optimized with server-side initi
 ### Critical Security Patterns
 - **Never skip authentication**: Always verify user identity in API routes
 - **Use Row Level Security**: Database automatically filters data per user
+- **Service-role-only writes**: Only the Stripe webhook (service role, `lib/db/queries.ts`) may write the `users` row, including `has_access`. RLS forbids the client/`authenticated` role from updating `users` — never grant access from client or DAL code
 - **Webhook verification**: Stripe webhooks must verify signatures
 - **Rate limiting**: Applied to all API routes except public webhooks
-- **Environment variables**: Keep secrets in `.env.local`, never commit
+- **Environment variables**: Keep secrets in `.env.local`, never commit. Required server secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`) throw in production if missing (`lib/config.ts`)
 
 ### Database Migration Safety
 - **Test sign-up flow**: Always verify authentication works after migrations
@@ -265,4 +272,5 @@ const purchases = await getUserPurchases(); // Auth check + user's purchases onl
 - **Styling**: Use Tailwind CSS 4 with custom theme variables
 - **Testing**: No automated tests configured - relies on manual testing flow
 - **Authentication**: Always prefer DAL functions over direct Supabase client calls
-- **No Server Actions**: This template avoids server actions for simplicity
+- **Data fetching**: Raw `fetch` only — no swr / react-query
+- **No Server Actions**: Confirmed — there are zero `'use server'` directives; all mutations go through Route Handlers in `app/api/*`

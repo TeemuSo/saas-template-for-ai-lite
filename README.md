@@ -143,9 +143,6 @@ saas-template-lite/
 │   ├── db/                # Database queries
 │   ├── payments/          # Stripe integration
 │   └── supabase/          # Supabase client
-├── docs/                  # Documentation assets (README videos/images)
-│   ├── videos/            # Video demonstrations
-│   └── images/            # Documentation images
 ├── public/                # Static assets (included in build)
 └── supabase/              # Database schema and migrations
 ```
