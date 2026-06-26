@@ -1,0 +1,105 @@
+name: Claude Code Review
+
+# Two-pass review on every PR:
+#   Pass 1 (Reviewer)  — finds ONLY critical candidates, writes them to a file. Posts nothing.
+#   Pass 2 (Verifier)  — a second, independent Claude re-checks each candidate against the
+#                        real code and posts ONLY the ones it can confirm, discarding false positives.
+# This mirrors how Anthropic's managed Code Review keeps false positives low: an
+# independent verification step gates findings before a human ever sees them.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review-and-verify:
+    name: Review → Verify
+    runs-on: ubuntu-latest
+    # Skip drafts and fork PRs (forks don't receive secrets, so the action couldn't auth anyway).
+    if: >
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ---------- Pass 1: Reviewer (find critical candidates only) ----------
+      - name: "Pass 1 — Reviewer (find candidates)"
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are the REVIEW pass of a two-stage code review. DO NOT post any comment
+            and DO NOT modify any code. Your only output is a file.
+
+            Repo: ${{ github.repository }}
+            PR:   #${{ github.event.pull_request.number }}
+
+            Steps:
+            1. Get the diff:  gh pr diff ${{ github.event.pull_request.number }}
+            2. Find ONLY high-confidence, CRITICAL issues introduced by THIS diff:
+               - security: auth/access-control bypass, secret exposure, injection, SSRF
+               - revenue/payment bypass
+               - data loss or corruption
+               - crashes or a broken build
+               - breaking API/contract changes
+               Ignore style, naming, nits, and subjective preferences.
+            3. For each candidate, open the surrounding code and ground the finding in
+               what the code actually does.
+            4. Write a JSON array to `candidates.json` in the repo root. Each element:
+               {"file","line","severity":"critical"|"high","title","rationale","evidence","suggested_fix"}
+               If you find nothing that clears that bar, write exactly: []
+
+            Be precise. A wrong "critical" finding is worse than a missed nit.
+          claude_args: |
+            --max-turns 20
+            --model claude-sonnet-4-6
+            --allowedTools "Read,Grep,Glob,Write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git diff:*),Bash(git log:*)"
+
+      # ---------- Pass 2: Verifier (confirm, then post only what's real) ----------
+      - name: "Pass 2 — Verifier (confirm & post)"
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are the VERIFY pass. An independent reviewer proposed critical findings
+            in `candidates.json`. Your job is to be the skeptic and let through ONLY
+            findings that genuinely hold up.
+
+            Repo: ${{ github.repository }}
+            PR:   #${{ github.event.pull_request.number }}
+
+            Steps:
+            1. Read `candidates.json`. If it is missing or empty ([]), post this single
+               comment and stop:
+                 gh pr comment ${{ github.event.pull_request.number }} --body "✅ **Claude review:** no critical issues found."
+            2. For EACH candidate, independently verify against the actual code on this
+               branch. Reject it as a FALSE POSITIVE if any of these are true:
+               - the code path is unreachable, dead, test/mock-only, or already guarded elsewhere
+               - the "evidence" misreads what the code does
+               - it is not actually introduced/worsened by this PR
+               - it is a style/preference dressed up as critical
+               Default to rejecting when you are not confident it is real.
+            3. Post ONE consolidated PR comment via:
+                 gh pr comment ${{ github.event.pull_request.number }} --body "<markdown>"
+               The comment must contain ONLY verified findings, each as:
+                 - **[severity] file:line — title** — what's wrong, why it's reachable, and the concrete fix.
+               End with a one-line audit trail: "Verified N of M proposed; discarded (M−N) as false positives."
+               If nothing survives verification, say no real critical issues were confirmed.
+
+            Do NOT modify code. Be concise and specific.
+          claude_args: |
+            --max-turns 25
+            --model claude-opus-4-8
+            --allowedTools "Read,Grep,Glob,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(git diff:*),Bash(git log:*)"

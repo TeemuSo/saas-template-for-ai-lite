@@ -1,0 +1,121 @@
+name: Claude Auto-Fix CI
+
+# When the CI workflow fails on a PR branch, Claude reads the failing logs and
+# pushes a minimal fix to that same branch.
+#
+# Notes:
+# - `workflow_run` only fires from workflows on the DEFAULT branch, so this
+#   activates once merged to main.
+# - The fix is pushed with GITHUB_TOKEN. Pushes made with GITHUB_TOKEN do NOT
+#   trigger new workflow runs, which is what prevents an infinite fix loop.
+#   (Re-run CI manually, or it runs on the next human push, to validate the fix.)
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  auto-fix:
+    name: Diagnose & fix failing CI
+    # Only failed CI runs, only from a same-repo PR branch (never main, never forks).
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch != 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+      id-token: write
+    steps:
+      - name: Checkout the failing PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Loop guard (skip our own fix commits)
+        id: guard
+        run: |
+          author="$(git log -1 --pretty=format:'%an')"
+          msg="$(git log -1 --pretty=format:'%s')"
+          if [ "$author" = "claude[bot]" ] || printf '%s' "$msg" | grep -qiE 'claude auto-fix'; then
+            echo "Last commit is an auto-fix; skipping to avoid a loop."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup pnpm
+        if: steps.guard.outputs.skip == 'false'
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        if: steps.guard.outputs.skip == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Collect failing CI logs
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run view ${{ github.event.workflow_run.id }} --log-failed > ci-failure.log 2>&1 \
+            || gh run view ${{ github.event.workflow_run.id }} --log > ci-failure.log 2>&1 \
+            || echo "(could not fetch logs)" > ci-failure.log
+          # Keep the prompt bounded — errors are at the tail.
+          tail -c 60000 ci-failure.log > ci-failure.trunc.log
+
+      - name: Claude diagnoses and fixes
+        if: steps.guard.outputs.skip == 'false'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            CI failed on branch `${{ github.event.workflow_run.head_branch }}`.
+            Failing run: ${{ github.event.workflow_run.html_url }}
+
+            The truncated failing logs are in `ci-failure.trunc.log` — read it first.
+
+            Diagnose the ROOT CAUSE and apply the MINIMAL change that makes CI pass.
+            Likely causes in this repo:
+              - `pnpm-lock.yaml` out of date after a `package.json` change
+                → regenerate with `pnpm install --lockfile-only`
+              - a wrong `packageManager` pin vs. the lockfile version
+              - a TypeScript error → `pnpm exec tsc --noEmit`
+
+            Then VERIFY locally — both must succeed:
+              pnpm install --frozen-lockfile
+              pnpm exec tsc --noEmit
+
+            Hard rules:
+              - Do NOT touch unrelated code.
+              - Do NOT weaken, skip, or delete the failing check to make it pass.
+              - If you cannot find a safe minimal fix, make no changes.
+          claude_args: |
+            --max-turns 30
+            --model claude-sonnet-4-6
+            --allowedTools "Read,Grep,Glob,Edit,Write,Bash(pnpm install:*),Bash(pnpm exec:*),Bash(pnpm run:*),Bash(corepack:*),Bash(cat:*),Bash(ls:*),Bash(git diff:*),Bash(git status:*)"
+
+      - name: Commit & push fix
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          git config user.name "claude[bot]"
+          git config user.email "41898282+claude[bot]@users.noreply.github.com"
+          rm -f ci-failure.log ci-failure.trunc.log
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "Claude produced no changes; nothing to push."
+            exit 0
+          fi
+          git add -A
+          git commit -m "fix(ci): Claude auto-fix for failing pipeline
+
+          Auto-generated fix for ${{ github.event.workflow_run.html_url }}"
+          git push origin HEAD:"${BRANCH}"
