@@ -77,11 +77,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(destination, request.url));
   }
 
-  // Add pathname to headers for server components
-  const response = authResult.response;
-  response.headers.set('x-pathname', pathname);
-  
-  return response;
+  return authResult.response;
 }
 
 /**
