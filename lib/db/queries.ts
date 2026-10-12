@@ -118,10 +118,11 @@ export async function createPurchase(data: {
       throw new Error('User not found');
     }
 
-    // Create the purchase record
+    // Upsert on the session ID so Stripe's webhook retries don't fail on the
+    // unique constraint and get retried forever
     const { data: purchase, error } = await supabase
       .from('purchases')
-      .insert({
+      .upsert({
         user_id: user.id, // Use internal ID for foreign key
         stripe_payment_intent_id: data.stripePaymentIntentId,
         stripe_session_id: data.stripeSessionId || null,
@@ -129,7 +130,7 @@ export async function createPurchase(data: {
         currency: data.currency,
         status: 'completed',
         product_name: data.productName,
-      })
+      }, { onConflict: 'stripe_session_id' })
       .select()
       .single();
 

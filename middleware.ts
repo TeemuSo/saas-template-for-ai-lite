@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { checkRateLimit, getIpFromRequest } from '@/lib/rate-limit';
 import { config as appConfig } from '@/lib/config';
+import { safeRedirectPath } from '@/lib/utils';
 
 /**
  * Middleware following Next.js best practices
@@ -72,8 +73,10 @@ export async function middleware(request: NextRequest) {
 
   // 6. Redirect authenticated users away from auth pages
   if (routeConfig.isAuthPage && authResult.hasSession) {
-    const redirectUrl = request.nextUrl.searchParams.get('redirect');
-    const destination = redirectUrl ? `/${redirectUrl}` : appConfig.auth.paths.afterSignIn;
+    const destination = safeRedirectPath(
+      request.nextUrl.searchParams.get('redirect'),
+      appConfig.auth.paths.afterSignIn
+    );
     return NextResponse.redirect(new URL(destination, request.url));
   }
 

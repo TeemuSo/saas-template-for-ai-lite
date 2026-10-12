@@ -1,78 +1,21 @@
+import 'server-only';
 import Stripe from 'stripe';
-import { redirect } from 'next/navigation';
-import { User } from '@/lib/supabase/types';
-import { getUser } from '@/lib/auth/dal';
-import { config } from '@/lib/config';
+import { requireEnv } from '@/lib/config';
 
-export const stripe = new Stripe(config.stripe.secretKey, {
-  apiVersion: '2025-02-24.acacia'
-});
+let stripeClient: Stripe | null = null;
 
-export async function createCheckoutSession({
-  priceId,
-  userId
-}: {
-  priceId: string;
-  userId?: string;
-}) {
-  const userData = await getUser();
-
-  if (!userData) {
-    redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
-  }
-
-  const user = userData.dbUser;
-
-  // Create a Stripe customer if one doesn't exist
-  let customerId = user.stripe_customer_id;
-  if (!customerId) {
-    // Use auth user details from DAL
-    const authUser = userData.user;
-    
-    const customer = await stripe.customers.create({
-      email: authUser?.email,
-      name: authUser?.user_metadata?.full_name || undefined,
+// Created on first use so the app builds without Stripe secrets present.
+export function getStripe(): Stripe {
+  if (!stripeClient) {
+    stripeClient = new Stripe(requireEnv('STRIPE_SECRET_KEY'), {
+      apiVersion: '2025-02-24.acacia'
     });
-    customerId = customer.id;
   }
-
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1
-      }
-    ],
-    mode: 'payment',
-    success_url: `${config.app.url}${config.stripe.successUrl}`,
-    cancel_url: `${config.app.url}${config.stripe.cancelUrl}`,
-    customer: customerId,
-    client_reference_id: user.supabase_user_id, // Use Supabase user ID
-    allow_promotion_codes: true,
-    payment_intent_data: {
-      metadata: {
-        userId: user.supabase_user_id // Use Supabase user ID
-      }
-    }
-  });
-
-  redirect(session.url!);
-}
-
-export async function handlePaymentSuccess(
-  paymentIntent: Stripe.PaymentIntent
-) {
-  const userId = paymentIntent.metadata.userId;
-  
-  if (!userId) {
-    console.error('No user ID found in payment intent metadata');
-    return;
-  }
+  return stripeClient;
 }
 
 export async function getStripeProducts() {
-  const products = await stripe.products.list({
+  const products = await getStripe().products.list({
     active: true,
     expand: ['data.default_price']
   });
@@ -89,7 +32,7 @@ export async function getStripeProducts() {
 }
 
 export async function getStripePrices() {
-  const prices = await stripe.prices.list({
+  const prices = await getStripe().prices.list({
     expand: ['data.product'],
     active: true,
     type: 'one_time'

@@ -10,6 +10,7 @@ import { Zap, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 // Using semantic Tailwind classes and @apply helpers
 import { useAuth } from '@/lib/auth/auth-provider';
 import { config } from '@/lib/config';
+import { safeRedirectPath } from '@/lib/utils';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -40,12 +41,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
         if (mode === 'signup' && 'requiresConfirmation' in result && result.requiresConfirmation) {
           setSuccess('Account created! Please check your email to confirm your account before signing in.');
         } else {
-          // Redirect will be handled by the auth provider
-          if (redirect) {
-            window.location.href = `/${redirect}`;
-          } else {
-            window.location.href = '/app';
-          }
+          window.location.href = safeRedirectPath(redirect, config.auth.paths.afterSignIn);
         }
       } else {
         setError(result.error || 'An error occurred');
@@ -65,7 +61,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     setError('');
     
     try {
-      const result = await signInWithGoogle(redirect || 'app');
+      const result = await signInWithGoogle(safeRedirectPath(redirect, config.auth.paths.afterSignIn));
       
       if (!result.success) {
         setError(result.error || 'Failed to sign in with Google');

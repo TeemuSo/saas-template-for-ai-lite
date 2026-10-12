@@ -58,6 +58,7 @@ CREATE TABLE purchases (
 
 **RLS automatically protects your data**:
 - Users can only see **their own** data
+- Users can **read** but never **write** `users` or `purchases` — otherwise anyone could set their own `has_access = true`. New profile rows are created only through the `create_user_profile()` RPC.
 - Webhooks can access **all** data (using service role)
 - No need to manually filter queries
 
@@ -113,18 +114,24 @@ For **system operations** that bypass RLS (webhooks, admin tasks):
 
 ```typescript
 import { grantUserAccess, createPurchase } from '@/lib/db/queries';
+import { getStripe } from '@/lib/payments/stripe';
 
-// Stripe Webhook - Grant access after payment
-export async function POST(request: Request) {
-  const { supabaseUserId } = await request.json();
-  
+// Only call these after verifying the request really came from Stripe.
+// Never take the user ID from an unverified request body: anyone could
+// POST their own ID and get access for free. See app/api/stripe/webhook/route.ts.
+const event = getStripe().webhooks.constructEvent(rawBody, signature, webhookSecret);
+if (event.type === 'checkout.session.completed') {
+  const session = event.data.object;
+  const supabaseUserId = session.client_reference_id!; // set server-side at checkout
+
   // Service role bypasses RLS for system operations
   await grantUserAccess(supabaseUserId);
-  
+
   await createPurchase({
     supabaseUserId,
-    amount: 4900,
-    currency: 'usd',
+    stripeSessionId: session.id,
+    amount: session.amount_total ?? 0,
+    currency: session.currency ?? 'usd',
     productName: 'SaaS Access'
   });
 }

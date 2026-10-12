@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/payments/stripe';
+import { getStripe } from '@/lib/payments/stripe';
 import { getApiUser } from '@/lib/auth/dal';
 import { updateUserStripeCustomerId } from '@/lib/db/queries';
 import { config } from '@/lib/config';
@@ -22,14 +22,20 @@ export async function POST(request: NextRequest) {
     }
 
     const { user, dbUser } = userData;
+    const stripe = getStripe();
 
     // Create a Stripe customer if one doesn't exist
     let customerId = dbUser.stripe_customer_id;
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email || '',
-        name: user.user_metadata?.full_name || undefined,
-      });
+      const customer = await stripe.customers.create(
+        {
+          email: user.email || '',
+          name: user.user_metadata?.full_name || undefined,
+          metadata: { userId: userData.userId },
+        },
+        // Double-clicks within Stripe's idempotency window reuse one customer
+        { idempotencyKey: `customer-create-${userData.userId}` }
+      );
       customerId = customer.id;
       
       // Persist customer ID to avoid creating duplicates

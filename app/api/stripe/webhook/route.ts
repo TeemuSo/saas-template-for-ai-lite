@@ -8,8 +8,7 @@ import {
   getUsersByStripeCustomerId
 } from '@/lib/db/queries';
 import { config } from '@/lib/config';
-
-const stripe = new Stripe(config.stripe.secretKey);
+import { getStripe } from '@/lib/payments/stripe';
 
 /**
  * Stripe Webhook Handler
@@ -31,26 +30,34 @@ export async function POST(request: NextRequest) {
 
   let event: Stripe.Event;
 
-  try {
-    // Get the webhook signature from headers
-    const stripeSignature = (await headers()).get('stripe-signature');
+  // Without a secret, signature verification would accept events signed with
+  // an empty or guessable key. Fail with 500 so Stripe retries once configured.
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not set; refusing to process webhook');
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+  }
 
+  const stripeSignature = (await headers()).get('stripe-signature');
+  if (!stripeSignature) {
+    return NextResponse.json({ message: 'Missing stripe-signature header' }, { status: 400 });
+  }
+
+  try {
     // Verify the webhook signature to ensure it's from Stripe
     // This prevents malicious actors from calling our webhook
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       await request.text(),
-      stripeSignature as string,
-      config.stripe.webhookSecret
+      stripeSignature,
+      webhookSecret
     );
     console.log('✅ Webhook signature verified successfully');
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    // On error, log and return the error message
-    if (err! instanceof Error) console.log(err);
-    console.log(`❌ Error message: ${errorMessage}`);
+    console.log(`❌ Webhook signature verification failed: ${errorMessage}`);
     return NextResponse.json(
-      {message: `Webhook Error: ${errorMessage}`},
-      {status: 400}
+      { message: 'Webhook signature verification failed' },
+      { status: 400 }
     );
   }
 

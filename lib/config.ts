@@ -20,9 +20,7 @@ export const config = {
   // Stripe payment settings
   stripe: {
     currency: process.env.STRIPE_CURRENCY || 'usd',
-    priceId: process.env.STRIPE_PRICE_ID || 'your-price-id',
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'your-webhook-secret',
-    secretKey: process.env.STRIPE_SECRET_KEY || 'your-secret-key',
+    priceId: process.env.STRIPE_PRICE_ID || '',
     productName: process.env.STRIPE_PRODUCT_NAME || 'SaaS Access',
     successUrl: '/app?payment=success',
     cancelUrl: '/?payment=cancelled',
@@ -53,7 +51,6 @@ export const config = {
     projectRef: process.env.NEXT_PUBLIC_SUPABASE_URL?.split('.')[0].split('//')[1] || 'your-project-ref',
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project-ref.supabase.co',
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key',
-    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || 'your-service-role-key',
   },
 
   // Rate limiting settings (used in rate-limit.ts)
@@ -63,6 +60,21 @@ export const config = {
     windowMs: 60 * 1000, // 1 minute
   },
 } as const;
+
+/**
+ * Read a server-only secret. Throws when it is missing so a misconfigured
+ * deployment fails closed instead of running with a guessable placeholder.
+ * Call it at request time, not at module load, so builds work without secrets.
+ */
+export function requireEnv(
+  name: 'STRIPE_SECRET_KEY' | 'STRIPE_WEBHOOK_SECRET' | 'SUPABASE_SERVICE_ROLE_KEY'
+): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
 
 // Type-safe config access
 export type Config = typeof config; 

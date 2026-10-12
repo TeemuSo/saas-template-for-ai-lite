@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { config } from '@/lib/config';
+import { safeRedirectPath } from '@/lib/utils';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
   const error_description = searchParams.get('error_description');
-  const next = searchParams.get('next') ?? '/app';
+  const next = safeRedirectPath(searchParams.get('next'), config.auth.paths.afterSignIn);
 
   // Handle OAuth errors
   if (error) {

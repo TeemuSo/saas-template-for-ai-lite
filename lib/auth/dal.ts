@@ -18,6 +18,31 @@ import type { User } from '@/lib/supabase/types';
  * - Security best practices
  */
 
+type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Fetch the user's database row, creating it if it doesn't exist yet.
+ *
+ * Users who sign up with email + password while email confirmation is off
+ * never pass through /auth/callback, so their row is created here.
+ */
+async function fetchOrCreateDbUser(supabase: ServerSupabase, userId: string) {
+  const select = () =>
+    supabase.from('users').select('*').eq('supabase_user_id', userId).maybeSingle();
+
+  const { data: existing, error } = await select();
+  if (error) throw error;
+  if (existing) return existing;
+
+  const { error: rpcError } = await supabase.rpc('create_user_profile');
+  if (rpcError) throw rpcError;
+
+  const { data: created, error: refetchError } = await select();
+  if (refetchError) throw refetchError;
+  if (!created) throw new Error('User profile could not be created');
+  return created;
+}
+
 /**
  * Verify the user's session and return user data
  * 
@@ -64,34 +89,17 @@ export const verifySession = cache(async (redirectTo?: string) => {
 export const getUser = cache(async (redirectTo?: string) => {
   const session = await verifySession(redirectTo);
   
+  const supabase = await createClient();
+
   try {
-    const supabase = await createClient();
-    
-    const { data: dbUser, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('supabase_user_id', session.userId)
-      .single();
-    
-    if (error) {
-       if (error.code === 'PGRST116') {
-         // User doesn't exist in database yet - this can happen for new users
-         // For now, redirect to sign-in - in production you might want a setup flow
-         console.log('User not found in database:', session.userId);
-         redirect(redirectTo || config.auth.paths.signIn);
-       }
-      
-      console.error('Error fetching user from database:', error);
-      throw new Error('Failed to fetch user data');
-    }
-    
+    const dbUser = await fetchOrCreateDbUser(supabase, session.userId);
     return {
       ...session,
       dbUser
     };
   } catch (error) {
-    console.error('Error in getUser:', error);
-    throw error;
+    console.error('Error fetching user from database:', error);
+    throw new Error('Failed to fetch user data');
   }
 });
 
@@ -139,12 +147,11 @@ export const getOptionalUser = cache(async () => {
     }
     
     // Also fetch database record if authenticated
-    const { data: dbUser } = await supabase
-      .from('users')
-      .select('*')
-      .eq('supabase_user_id', user.id)
-      .single();
-    
+    const dbUser = await fetchOrCreateDbUser(supabase, user.id).catch((error) => {
+      console.error('Error fetching user from database:', error);
+      return null;
+    });
+
     return {
       isAuth: true,
       userId: user.id,
@@ -218,18 +225,15 @@ export const getApiUser = cache(async () => {
   const session = await verifyApiSession();
   
   const supabase = await createClient();
-  
-  const { data: dbUser, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('supabase_user_id', session.userId)
-    .single();
-  
-  if (error) {
+
+  let dbUser;
+  try {
+    dbUser = await fetchOrCreateDbUser(supabase, session.userId);
+  } catch (error) {
     console.error('Error fetching user from database:', error);
     throw new Error('Failed to fetch user data');
   }
-  
+
   return {
     ...session,
     dbUser

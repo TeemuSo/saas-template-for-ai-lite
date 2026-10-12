@@ -15,7 +15,7 @@
           "-y",
           "@stripe/mcp",
           "--tools=all",
-          "--api-key=YOUR_OPENAI_API_KEY"
+          "--api-key=YOUR_STRIPE_SECRET_KEY"
         ]
       },
       "taskmaster-ai": {
